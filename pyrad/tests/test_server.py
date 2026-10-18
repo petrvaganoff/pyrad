@@ -197,7 +197,9 @@ class SocketTests(unittest.TestCase):
 
 class AuthPacketHandlingTests(unittest.TestCase):
     def setUp(self):
-        self.server = Server()
+        # these tests cover the dispatch, not the Message-Authenticator,
+        # which the dummy packets below cannot carry
+        self.server = Server(enforce_ma=False)
         self.server.hosts['host'] = TrivialObject()
         self.server.hosts['host'].secret = 'supersecret'
         self.packet = TrivialObject()

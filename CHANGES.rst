@@ -4,16 +4,23 @@ Changelog
 Unreleased
 ----------
 
+Breaking changes
+~~~~~~~~~~~~~~~~
+
+* ``enforce_ma`` defaults to True in Client, ClientAsync, Server,
+  ServerAsync (and so Proxy) and the Twisted integration (BlastRADIUS,
+  CVE-2024-3596). Servers drop Access-Requests without a
+  Message-Authenticator, and clients discard replies to Access-Request and
+  Status-Server packets without one. Peers which do not send a
+  Message-Authenticator need ``enforce_ma=False``, which leaves them open
+  to the attack. The FutureWarning issued when ``enforce_ma`` was not
+  passed is gone.
+
+Changes
+~~~~~~~
+
 * BlastRADIUS (CVE-2024-3596) countermeasures:
 
-  * Client, ClientAsync, Server, ServerAsync (and so Proxy) and the
-    Twisted integration issue a FutureWarning, once per process, when
-    enforce_ma is not passed. It still defaults to False, which leaves
-    them open to the attack: stripping the Message-Authenticator is all an
-    attacker on the path needs to get back to the forgeable MD5 Response
-    Authenticator. The default will change to True in a future release.
-    Pass enforce_ma=True (recommended), or enforce_ma=False for peers that
-    do not send a Message-Authenticator, to silence the warning.
   * A Message-Authenticator which is present is now verified in
     Accounting-, CoA- and Disconnect-Requests as well (RFC 5176 section
     3.3); only Access-Request checked it, so a broken one was accepted in

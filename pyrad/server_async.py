@@ -13,7 +13,7 @@ from pyrad.packet import Packet, AccessAccept, AccessReject, \
     AccountingRequest, AccountingResponse, \
     DisconnectACK, DisconnectNAK, DisconnectRequest, CoARequest, \
     CoAACK, CoANAK, AccessRequest, AuthPacket, AcctPacket, CoAPacket, \
-    PacketError, _EnforceMA
+    PacketError
 
 from pyrad.server import ServerPacketError, CheckMessageAuthenticator, _LookupHost
 
@@ -191,7 +191,7 @@ class ServerAsync(metaclass=ABCMeta):
                  coa_port=3799, hosts=None, dictionary=None,
                  loop=None, logger_name='pyrad',
                  enable_pkt_verify=True,
-                 debug=False, enforce_ma=None):
+                 debug=False, enforce_ma=True):
         """
         :param auth_port: port to listen on for authentication packets
         :type  auth_port: int
@@ -220,9 +220,9 @@ class ServerAsync(metaclass=ABCMeta):
         :type  debug: bool
         :param enforce_ma: drop Access-Requests without a Message-Authenticator
             (an invalid Message-Authenticator is always dropped).
-            ``True`` is recommended. If it is not passed, it is ``False``
-            and a :exc:`FutureWarning` is issued once per process: the
-            default will change to ``True`` in a future release.
+            ``False`` is needed for clients which do not send one, but
+            leaves the server open to the BlastRADIUS attack
+            (CVE-2024-3596).
         :type  enforce_ma: bool
         """
 
@@ -249,7 +249,7 @@ class ServerAsync(metaclass=ABCMeta):
         self.enable_pkt_verify = enable_pkt_verify
 
         self.debug = debug
-        self.enforce_ma = _EnforceMA(enforce_ma)
+        self.enforce_ma = enforce_ma
 
     def __request_handler__(self, protocol, req, addr):
 

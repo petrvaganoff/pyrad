@@ -141,7 +141,7 @@ class Server(host.Host):
 
     def __init__(self, addresses=[], authport=1812, acctport=1813, coaport=3799,
                  hosts=None, dict=None, auth_enabled=True, acct_enabled=True, coa_enabled=False,
-                 enforce_ma=None, enable_pkt_verify=True):
+                 enforce_ma=True, enable_pkt_verify=True):
         """
         :param addresses: IP addresses or host names to listen on. The
             constructor binds them with :meth:`~pyrad.server.Server.BindToAddress`. Without
@@ -170,9 +170,9 @@ class Server(host.Host):
         :type  coa_enabled: bool
         :param enforce_ma: drop Access-Requests without a Message-Authenticator
             (an invalid Message-Authenticator is always dropped).
-            ``True`` is recommended. If it is not passed, it is ``False``
-            and a :exc:`FutureWarning` is issued once per process: the
-            default will change to ``True`` in a future release.
+            ``False`` is needed for clients which do not send one, but
+            leaves the server open to the BlastRADIUS attack
+            (CVE-2024-3596).
         :type  enforce_ma: bool
         :param enable_pkt_verify: drop Accounting, CoA and Disconnect requests
             with an invalid Request Authenticator
@@ -190,7 +190,7 @@ class Server(host.Host):
         self.acctfds = []
         self.coa_enabled = coa_enabled
         self.coafds = []
-        self.enforce_ma = packet._EnforceMA(enforce_ma)
+        self.enforce_ma = enforce_ma
         self.enable_pkt_verify = enable_pkt_verify
 
         for addr in addresses:

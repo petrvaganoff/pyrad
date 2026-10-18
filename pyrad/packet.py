@@ -14,7 +14,6 @@ import hashlib
 import hmac
 import secrets
 import struct
-import warnings
 
 random_generator = secrets.SystemRandom()
 
@@ -42,29 +41,6 @@ CurrentID = random_generator.randrange(1, 255)
 class PacketError(Exception):
     """Raised for a packet or attribute value that cannot be decoded, e.g.
     an invalid length."""
-
-
-_enforce_ma_warned = False
-
-
-def _EnforceMA(enforce_ma):
-    """Resolve the enforce_ma argument of a client or server constructor.
-
-    None (not passed) warns once per process and falls back to False. The
-    default changes to True in a future release.
-    """
-    global _enforce_ma_warned
-    if enforce_ma is not None:
-        return enforce_ma
-    if not _enforce_ma_warned:
-        _enforce_ma_warned = True
-        warnings.warn(
-            'enforce_ma defaults to False, which leaves you open to the '
-            'BlastRADIUS attack (CVE-2024-3596); the default will change to '
-            'True in a future release. Pass enforce_ma=True (recommended) or '
-            'enforce_ma=False explicitly to silence this warning.',
-            FutureWarning, stacklevel=3)
-    return False
 
 
 class Packet(OrderedDict):

@@ -12,7 +12,7 @@ import socket
 import time
 
 from pyrad.client import _EapMd5Identity, _EapMd5Response
-from pyrad.packet import Packet, AuthPacket, AcctPacket, CoAPacket, _EnforceMA
+from pyrad.packet import Packet, AuthPacket, AcctPacket, CoAPacket
 
 
 def _endpoint_options():
@@ -240,7 +240,7 @@ class ClientAsync:
     def __init__(self, server, auth_port=1812, acct_port=1813,
                  coa_port=3799, secret=b'', dict=None,
                  loop=None, retries=3, timeout=30,
-                 logger_name='pyrad', enforce_ma=None):
+                 logger_name='pyrad', enforce_ma=True):
 
         """
         :param    server: hostname or IP address of the RADIUS server
@@ -268,11 +268,9 @@ class ClientAsync:
         :param enforce_ma: require a Message-Authenticator in replies to
                            Access-Request and Status-Server packets (a
                            Message-Authenticator in a reply is always
-                           verified). ``True`` is recommended. If it is
-                           not passed, it is ``False`` and a
-                           :exc:`FutureWarning` is issued once per
-                           process: the default will change to ``True`` in
-                           a future release.
+                           verified). ``False`` is needed for servers which
+                           do not send one, but leaves the client open to
+                           the BlastRADIUS attack (CVE-2024-3596).
         :type  enforce_ma: bool
         """
         # resolved when used, asyncio.get_event_loop() fails outside of a
@@ -294,7 +292,7 @@ class ClientAsync:
 
         self.protocol_coa = None
         self.coa_port = coa_port
-        self.enforce_ma = _EnforceMA(enforce_ma)
+        self.enforce_ma = enforce_ma
 
     @property
     def loop(self):

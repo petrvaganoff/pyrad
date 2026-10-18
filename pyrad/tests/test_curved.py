@@ -76,7 +76,7 @@ class CurvedTests(unittest.TestCase):
     def testAccessRequest(self):
         protocol = self.curved.RADIUSAccess(hosts=self.hosts, dict=self.dict)
         protocol.processPacket = mock.Mock(wraps=protocol.processPacket)
-        self.receive(protocol, packet.AuthPacket(secret=SECRET, dict=self.dict))
+        self.receive(protocol, packet.AuthPacket(secret=SECRET, dict=self.dict, message_authenticator=True))
         pkt = protocol.processPacket.call_args[0][0]
         self.assertEqual(pkt.code, packet.AccessRequest)
         self.assertEqual(pkt.source, ('127.0.0.1', 1812))
@@ -91,7 +91,7 @@ class CurvedTests(unittest.TestCase):
         access = self.curved.RADIUSAccess(hosts=self.hosts, dict=self.dict)
         self.receive(access, packet.AcctPacket(secret=SECRET, dict=self.dict))
         accounting = self.curved.RADIUSAccounting(hosts=self.hosts, dict=self.dict)
-        self.receive(accounting, packet.AuthPacket(secret=SECRET, dict=self.dict))
+        self.receive(accounting, packet.AuthPacket(secret=SECRET, dict=self.dict, message_authenticator=True))
         messages = [call[0][0] for call in self.log.msg.call_args_list]
         self.assertEqual(len(messages), 2)
         self.assertIn('non-AccessRequest packet', messages[0])
@@ -105,7 +105,7 @@ class CurvedTests(unittest.TestCase):
     def testUnknownHost(self):
         protocol = self.curved.RADIUSAccess(hosts=self.hosts, dict=self.dict)
         protocol.processPacket = mock.Mock()
-        self.receive(protocol, packet.AuthPacket(secret=SECRET, dict=self.dict),
+        self.receive(protocol, packet.AuthPacket(secret=SECRET, dict=self.dict, message_authenticator=True),
                      host='192.0.2.1')
         protocol.processPacket.assert_not_called()
         self.assertIn('unknown host 192.0.2.1', self.log.msg.call_args[0][0])
@@ -118,7 +118,7 @@ class CurvedTests(unittest.TestCase):
             raise error
 
         protocol.processPacket = processPacket
-        self.receive(protocol, packet.AuthPacket(secret=SECRET, dict=self.dict))
+        self.receive(protocol, packet.AuthPacket(secret=SECRET, dict=self.dict, message_authenticator=True))
         return protocol
 
     def testHandlerRaisingCurvedPacketError(self):
@@ -183,7 +183,8 @@ class CurvedTests(unittest.TestCase):
 
     def testAccessRequestIsDecodedWithSecret(self):
         protocol = self.curved.RADIUSAccess(hosts=self.hosts, dict=self.dict)
-        req = packet.AuthPacket(secret=SECRET, dict=self.dict, User_Name='alice')
+        req = packet.AuthPacket(secret=SECRET, dict=self.dict, User_Name='alice',
+                                message_authenticator=True)
         req['User-Password'] = req.PwCrypt('password')
         pkt = self.received(protocol, req)
         self.assertIsInstance(pkt, packet.AuthPacket)
@@ -234,7 +235,7 @@ class CurvedTests(unittest.TestCase):
                 self.CreateAuthPacket(**kwargs)
 
         protocol = Access(hosts=self.hosts, dict=self.dict)
-        pkt = self.received(protocol, packet.AuthPacket(secret=SECRET, dict=self.dict))
+        pkt = self.received(protocol, packet.AuthPacket(secret=SECRET, dict=self.dict, message_authenticator=True))
         self.assertEqual(pkt.code, packet.AccessRequest)
         self.assertEqual(pkt.secret, SECRET)
 
@@ -251,11 +252,11 @@ class CurvedTests(unittest.TestCase):
             self.log.reset_mock()
             protocol = self.curved.RADIUSAccess(hosts=hosts, dict=self.dict)
             self.assertIsNone(self.received(
-                protocol, packet.AuthPacket(secret=SECRET, dict=self.dict)))
+                protocol, packet.AuthPacket(secret=SECRET, dict=self.dict, message_authenticator=True)))
             self.assertIn('no secret', self.log.msg.call_args[0][0])
         protocol = self.curved.RADIUSAccess(hosts={'127.0.0.1'}, dict=self.dict)
         self.assertIsNone(self.received(
-            protocol, packet.AuthPacket(secret=SECRET, dict=self.dict),
+            protocol, packet.AuthPacket(secret=SECRET, dict=self.dict, message_authenticator=True),
             host='192.0.2.1'))
         self.assertIn('unknown host', self.log.msg.call_args[0][0])
 

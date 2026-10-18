@@ -342,9 +342,9 @@ default. CoA and Disconnect requests are received with
 Before a handler is called the server drops invalid requests:
 
 * requests from unknown clients
-* Access-Requests with an invalid Message-Authenticator, and with
-  ``enforce_ma=True`` Access-Requests without Message-Authenticator
-  (see :ref:`blastradius`)
+* Access-Requests with an invalid Message-Authenticator, and unless
+  ``enforce_ma=False`` is passed, Access-Requests without
+  Message-Authenticator (see :ref:`blastradius`)
 * Accounting, CoA and Disconnect requests with an invalid request
   authenticator, which proves that the client knows the secret. This
   check can be disabled with ``enable_pkt_verify=False``.

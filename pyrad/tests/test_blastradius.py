@@ -266,12 +266,13 @@ class ServerRequestTests(BlastRadiusTestCase):
         self.assertEqual(self.handled, [])
 
     def testMissingMessageAuthenticator(self):
-        self.handle(self.request(message_authenticator=False))
-        self.assertEqual(len(self.handled), 1)
-
-        self.server.enforce_ma = True
+        # dropped by default (enforce_ma), BlastRADIUS countermeasure
         self.assertRaises(ServerPacketError, self.handle,
                           self.request(message_authenticator=False))
+        self.assertEqual(self.handled, [])
+
+        self.server.enforce_ma = False
+        self.handle(self.request(message_authenticator=False))
         self.assertEqual(len(self.handled), 1)
 
 
@@ -283,7 +284,7 @@ class AsyncServerRequestTests(BlastRadiusTestCase):
         self.server.dict = self.dict
         self.server.debug = False
         self.server.enable_pkt_verify = False
-        self.server.enforce_ma = False
+        self.server.enforce_ma = True
         self.protocol = DatagramProtocolServer(
             '127.0.0.1', 1812, logging.getLogger('pyrad-test'), self.server,
             ServerType.Auth, {'127.0.0.1': RemoteHost('127.0.0.1', SECRET, 'localhost')},
@@ -305,10 +306,11 @@ class AsyncServerRequestTests(BlastRadiusTestCase):
         self.assertEqual(self.handled, [])
 
     def testMissingMessageAuthenticator(self):
+        # dropped by default (enforce_ma), BlastRADIUS countermeasure
         self.handle(self.request(message_authenticator=False))
-        self.assertEqual(len(self.handled), 1)
+        self.assertEqual(self.handled, [])
 
-        self.server.enforce_ma = True
+        self.server.enforce_ma = False
         self.handle(self.request(message_authenticator=False))
         self.assertEqual(len(self.handled), 1)
 
@@ -340,13 +342,14 @@ class CurvedServerRequestTests(BlastRadiusTestCase):
         self.assertIn('invalid Message-Authenticator', self.log.msg.call_args[0][0])
 
     def testMissingMessageAuthenticator(self):
+        # dropped by default (enforce_ma), BlastRADIUS countermeasure
         self.handle(self.request(message_authenticator=False))
-        self.assertEqual(len(self.handled), 1)
-
-        self.protocol.enforce_ma = True
-        self.handle(self.request(message_authenticator=False))
-        self.assertEqual(len(self.handled), 1)
+        self.assertEqual(self.handled, [])
         self.assertIn('without Message-Authenticator', self.log.msg.call_args[0][0])
+
+        self.protocol.enforce_ma = False
+        self.handle(self.request(message_authenticator=False))
+        self.assertEqual(len(self.handled), 1)
 
 
 def break_message_authenticator(raw):
@@ -380,12 +383,7 @@ class NullServerAsync(ServerAsync):
 
 
 class SecureDefaultTests(unittest.TestCase):
-    """enforce_ma still defaults to False, but leaving it out warns once per
-    process (CVE-2024-3596); the default changes to True in a future
-    release."""
-
-    def setUp(self):
-        packet._enforce_ma_warned = False
+    """enforce_ma defaults to True (CVE-2024-3596)."""
 
     def constructors(self):
         curved = load_curved()[0]
@@ -398,29 +396,19 @@ class SecureDefaultTests(unittest.TestCase):
             lambda **kw: curved.RADIUS(**kw),
         ]
 
-    def testDefaultWarnsOnce(self):
+    def testDefaultIsTrue(self):
         with warnings.catch_warnings(record=True) as caught:
             warnings.simplefilter('always')
             for create in self.constructors():
-                self.assertIs(create().enforce_ma, False)
-        self.assertEqual(len(caught), 1)
-        self.assertIs(caught[0].category, FutureWarning)
-        self.assertIn('CVE-2024-3596', str(caught[0].message))
-        # points at the caller, not at pyrad
-        self.assertEqual(caught[0].filename, __file__)
-
-    def testExplicitValueDoesNotWarn(self):
-        with warnings.catch_warnings(record=True) as caught:
-            warnings.simplefilter('always')
-            for create in self.constructors():
-                self.assertIs(create(enforce_ma=True).enforce_ma, True)
-                self.assertIs(create(enforce_ma=False).enforce_ma, False)
+                self.assertIs(create().enforce_ma, True)
         self.assertEqual(caught, [])
-        self.assertIs(packet._enforce_ma_warned, False)
 
-    def testPerPacketChecksDoNotWarn(self):
-        # VerifyReply and CheckMessageAuthenticator run for every packet:
-        # they keep False as their default and never warn
+    def testExplicitFalse(self):
+        for create in self.constructors():
+            self.assertIs(create(enforce_ma=False).enforce_ma, False)
+
+    def testPerPacketChecksDefaultToFalse(self):
+        # clients and servers pass their own enforce_ma to these
         self.assertIs(inspect.signature(packet.Packet.VerifyReply)
                       .parameters['enforce_ma'].default, False)
         self.assertIs(inspect.signature(CheckMessageAuthenticator)

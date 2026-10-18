@@ -121,7 +121,7 @@ class Client(host.Host):
     :type enforce_ma: bool
     """
     def __init__(self, server, authport=1812, acctport=1813,
-                 coaport=3799, secret=b'', dict=None, retries=3, timeout=5, enforce_ma=None):
+                 coaport=3799, secret=b'', dict=None, retries=3, timeout=5, enforce_ma=True):
         """
         :param   server: hostname or IP address of the RADIUS server
         :type    server: str
@@ -143,11 +143,9 @@ class Client(host.Host):
         :param enforce_ma: require a Message-Authenticator in replies to
                            Access-Request and Status-Server packets (a
                            Message-Authenticator in a reply is always
-                           verified). ``True`` is recommended. If it is
-                           not passed, it is ``False`` and a
-                           :exc:`FutureWarning` is issued once per
-                           process: the default will change to ``True`` in
-                           a future release.
+                           verified). ``False`` is needed for servers which
+                           do not send one, but leaves the client open to
+                           the BlastRADIUS attack (CVE-2024-3596).
         :type  enforce_ma: bool
         """
         host.Host.__init__(self, authport, acctport, coaport, dict)
@@ -157,7 +155,7 @@ class Client(host.Host):
         self._socket = None
         self.retries = retries
         self.timeout = timeout
-        self.enforce_ma = packet._EnforceMA(enforce_ma)
+        self.enforce_ma = enforce_ma
         self._poll = select.poll()
 
     def bind(self, addr):

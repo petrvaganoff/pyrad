@@ -54,7 +54,7 @@ class RADIUS(host.Host, protocol.DatagramProtocol):
     Accounting-Request.
     """
 
-    def __init__(self, hosts=None, dict=None, enforce_ma=None,
+    def __init__(self, hosts=None, dict=None, enforce_ma=True,
                  enable_pkt_verify=True):
         """
         :param hosts: hosts allowed to send packets, mapping their IP
@@ -69,9 +69,9 @@ class RADIUS(host.Host, protocol.DatagramProtocol):
         :type  dict: pyrad.dictionary.Dictionary
         :param enforce_ma: drop Access-Requests without a Message-Authenticator
             (an invalid Message-Authenticator is always dropped).
-            ``True`` is recommended. If it is not passed, it is ``False``
-            and a :exc:`FutureWarning` is issued once per process: the
-            default will change to ``True`` in a future release.
+            ``False`` is needed for clients which do not send one, but
+            leaves the server open to the BlastRADIUS attack
+            (CVE-2024-3596).
         :type  enforce_ma: bool
         :param enable_pkt_verify: drop Accounting-Requests with an invalid
             Request Authenticator
@@ -83,7 +83,7 @@ class RADIUS(host.Host, protocol.DatagramProtocol):
         if hosts is None:
             hosts = {}
         self.hosts = hosts
-        self.enforce_ma = packet._EnforceMA(enforce_ma)
+        self.enforce_ma = enforce_ma
         self.enable_pkt_verify = enable_pkt_verify
 
     def processPacket(self, pkt):
